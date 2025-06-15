@@ -393,10 +393,8 @@ public abstract class WebSocketClient extends AbstractWebSocket implements Runna
     if (connectReadThread != null) {
       throw new IllegalStateException("WebSocketClient objects are not reuseable");
     }
-    connectReadThread = new Thread(this);
-    connectReadThread.setDaemon(isDaemon());
+    connectReadThread = Thread.ofVirtual().start(this);
     connectReadThread.setName("WebSocketConnectReadThread-" + connectReadThread.getId());
-    connectReadThread.start();
   }
 
   /**
@@ -546,9 +544,7 @@ public abstract class WebSocketClient extends AbstractWebSocket implements Runna
         /* ignore */
       }
     }
-    writeThread = new Thread(new WebsocketWriteThread(this));
-    writeThread.setDaemon(isDaemon());
-    writeThread.start();
+    writeThread = Thread.ofVirtual().start(new WebsocketWriteThread(this));
 
     int receiveBufferSize = getReceiveBufferSize();
     byte[] rawbuffer = new byte[receiveBufferSize > 0 ? receiveBufferSize : DEFAULT_READ_BUFFER_SIZE];

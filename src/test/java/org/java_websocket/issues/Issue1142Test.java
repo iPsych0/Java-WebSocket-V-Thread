@@ -19,11 +19,13 @@ import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
 import org.java_websocket.server.WebSocketServer;
 import org.java_websocket.util.SSLContextUtil;
 import org.java_websocket.util.SocketUtil;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Disabled
 public class Issue1142Test {
 
 

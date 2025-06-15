@@ -25,32 +25,31 @@
 
 package org.java_websocket.util;
 
-import java.util.concurrent.Executors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class NamedThreadFactory implements ThreadFactory {
+    private final Logger log = LoggerFactory.getLogger(NamedThreadFactory.class);
 
-  private final ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
-  private final AtomicInteger threadNumber = new AtomicInteger(1);
-  private final String threadPrefix;
-  private final boolean daemon;
+    private final AtomicInteger threadNumber = new AtomicInteger(1);
+    private final String threadPrefix;
 
-  public NamedThreadFactory(String threadPrefix) {
-    this.threadPrefix = threadPrefix;
-    this.daemon = false;
-  }
+    public NamedThreadFactory(String threadPrefix) {
+        this.threadPrefix = threadPrefix;
+    }
 
-  public NamedThreadFactory(String threadPrefix, boolean daemon) {
-    this.threadPrefix = threadPrefix;
-    this.daemon = daemon;
-  }
+    @Override
+    public Thread newThread(Runnable runnable) {
+        String name = threadPrefix + "-" + threadNumber.getAndIncrement();
 
-  @Override
-  public Thread newThread(Runnable runnable) {
-    Thread thread = defaultThreadFactory.newThread(runnable);
-    thread.setDaemon(daemon);
-    thread.setName(threadPrefix + "-" + threadNumber);
-    return thread;
-  }
+        // Create a virtual thread with a custom name
+        return Thread.ofVirtual()
+                .name(name)
+                .uncaughtExceptionHandler((t, e) -> log.error("Uncaught exception in %s".formatted(t.getName()), e))
+                .factory()
+                .newThread(runnable);
+    }
 }

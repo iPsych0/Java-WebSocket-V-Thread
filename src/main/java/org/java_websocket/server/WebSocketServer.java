@@ -269,9 +269,7 @@ public abstract class WebSocketServer extends AbstractWebSocket implements Runna
     if (selectorthread != null) {
       throw new IllegalStateException(getClass().getName() + " can only be started once.");
     }
-    Thread t = new Thread(this);
-    t.setDaemon(isDaemon());
-    t.start();
+    Thread t = Thread.ofVirtual().start(this);
   }
 
   public void stop(int timeout) throws InterruptedException {
@@ -350,20 +348,6 @@ public abstract class WebSocketServer extends AbstractWebSocket implements Runna
       port = server.socket().getLocalPort();
     }
     return port;
-  }
-
-  @Override
-  public void setDaemon(boolean daemon) {
-    // pass it to the AbstractWebSocket too, to use it on the connectionLostChecker thread factory
-    super.setDaemon(daemon);
-    // we need to apply this to the decoders as well since they were created during the constructor
-    for (WebSocketWorker w : decoders) {
-      if (w.isAlive()) {
-        throw new IllegalStateException("Cannot call setDaemon after server is already started!");
-      } else {
-        w.setDaemon(daemon);
-      }
-    }
   }
 
   /**
@@ -619,7 +603,7 @@ public abstract class WebSocketServer extends AbstractWebSocket implements Runna
       server.register(selector, server.validOps());
       startConnectionLostTimer();
       for (WebSocketWorker ex : decoders) {
-        ex.start();
+        ex.getWorkerThread().start();
       }
       onStart();
     } catch (IOException ex) {
@@ -654,7 +638,7 @@ public abstract class WebSocketServer extends AbstractWebSocket implements Runna
     stopConnectionLostTimer();
     if (decoders != null) {
       for (WebSocketWorker w : decoders) {
-        w.interrupt();
+        w.getWorkerThread().interrupt();
       }
     }
     if (selector != null) {
@@ -750,7 +734,7 @@ public abstract class WebSocketServer extends AbstractWebSocket implements Runna
     //Shutting down WebSocketWorkers, see #222
     if (decoders != null) {
       for (WebSocketWorker w : decoders) {
-        w.interrupt();
+        w.getWorkerThread().interrupt();
       }
     }
     if (selectorthread != null) {
@@ -1106,23 +1090,33 @@ public abstract class WebSocketServer extends AbstractWebSocket implements Runna
   /**
    * This class is used to process incoming data
    */
-  public class WebSocketWorker extends Thread {
+  public class WebSocketWorker implements Runnable {
 
-    private BlockingQueue<WebSocketImpl> iqueue;
+    private BlockingQueue<WebSocketImpl> iqueue = new LinkedBlockingQueue<>();
+    private final String name;
+    private Thread workerThread;
 
     public WebSocketWorker() {
-      iqueue = new LinkedBlockingQueue<>();
-      setName("WebSocketWorker-" + getId());
-      setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-        @Override
-        public void uncaughtException(Thread t, Throwable e) {
-          log.error("Uncaught exception in thread {}: {}", t.getName(), e);
-        }
-      });
+      this.name = "WebSocketWorker-" + Thread.currentThread().getId();
+      startVirtualThread();
     }
 
     public void put(WebSocketImpl ws) throws InterruptedException {
       iqueue.put(ws);
+    }
+
+    private void startVirtualThread() {
+      this.workerThread = Thread.ofVirtual()
+              .name(name)
+              .uncaughtExceptionHandler((t, e) -> {
+                log.error("Uncaught exception in thread %s:".formatted(t.getName()), e);
+              })
+              .unstarted(this); // run() is executed
+    }
+
+
+    public Thread getWorkerThread() {
+      return this.workerThread;
     }
 
     @Override
@@ -1130,24 +1124,21 @@ public abstract class WebSocketServer extends AbstractWebSocket implements Runna
       WebSocketImpl ws = null;
       try {
         while (true) {
-          ByteBuffer buf;
           ws = iqueue.take();
-          buf = ws.inQueue.poll();
-          assert (buf != null);
+          ByteBuffer buf = ws.inQueue.poll();
+          assert buf != null;
           doDecode(ws, buf);
           ws = null;
         }
       } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
+        Thread.currentThread().interrupt(); // Restore interrupt status
       } catch (VirtualMachineError | ThreadDeath | LinkageError e) {
-        log.error("Got fatal error in worker thread {}", getName());
-        Exception exception = new Exception(e);
-        handleFatal(ws, exception);
+        log.error("Got fatal error in worker thread {}", name);
+        handleFatal(ws, new Exception(e));
       } catch (Throwable e) {
-        log.error("Uncaught exception in thread {}: {}", getName(), e);
+        log.error("Uncaught exception in thread {}: {}", name, e);
         if (ws != null) {
-          Exception exception = new Exception(e);
-          onWebsocketError(ws, exception);
+          onWebsocketError(ws, new Exception(e));
           ws.close();
         }
       }
