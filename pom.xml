@@ -10,9 +10,9 @@
     <description>A barebones WebSocket client and server implementation written 100% in Java</description>
     <url>https://github.com/TooTallNate/Java-WebSocket</url>
     <properties>
-        <java.version>24</java.version>
-        <maven.compiler.target>24</maven.compiler.target>
-        <maven.compiler.source>24</maven.compiler.source>
+        <java.version>25</java.version>
+        <maven.compiler.target>25</maven.compiler.target>
+        <maven.compiler.source>25</maven.compiler.source>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <slf4j.version>2.0.17</slf4j.version>
 
@@ -22,11 +22,11 @@
         <!-- Maven plugin versions -->
         <bnd.maven.plugin.version>6.4.0</bnd.maven.plugin.version>
         <maven.checkstyle.plugin.version>3.6.0</maven.checkstyle.plugin.version>
-        <maven.compiler.plugin.version>3.14.0</maven.compiler.plugin.version>
+        <maven.compiler.plugin.version>3.14.1</maven.compiler.plugin.version>
         <maven.gpg.plugin.version>1.6</maven.gpg.plugin.version>
         <maven.jar.plugin.version>3.4.2</maven.jar.plugin.version>
         <maven.javadoc.plugin.version>3.5.0</maven.javadoc.plugin.version>
-        <maven.shade.plugin.version>3.6.0</maven.shade.plugin.version>
+        <maven.shade.plugin.version>3.6.1</maven.shade.plugin.version>
         <maven.source.plugin.version>3.3.1</maven.source.plugin.version>
         <nexus.staging.maven.plugin.version>1.6.13</nexus.staging.maven.plugin.version>
         <sonar.projectKey>org.java-websocket:Java-WebSocket</sonar.projectKey>
@@ -105,7 +105,7 @@
                                 <goal>compile</goal>
                             </goals>
                             <configuration>
-                                <release>24</release>
+                                <release>25</release>
                             </configuration>
                         </execution>
 
@@ -116,7 +116,7 @@
                                 <goal>compile</goal>
                             </goals>
                             <configuration>
-                                <release>24</release>
+                                <release>25</release>
                                 <compileSourceRoots>
                                     <compileSourceRoot>${project.basedir}/src/main/java9</compileSourceRoot>
                                 </compileSourceRoots>
